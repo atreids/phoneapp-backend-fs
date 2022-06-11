@@ -96,7 +96,6 @@ app.post("/api/persons/", (req, res) => {
     name: newPerson.name,
     number: newPerson.number,
   };
-
   phonebook = phonebook.concat(person);
   res.send(204).end();
 });

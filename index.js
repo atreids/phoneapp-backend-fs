@@ -35,14 +35,16 @@ app.get("/api/persons/:id", (req, res, next) => {
     .catch((error) => next(error));
 });
 
-// app.get("/info", (req, res) => {
-//   const currentDate = new Date();
-//   const phonebookLength = phonebook.length;
-//   res.send(
-//     `<p>Phonebook has info on ${phonebookLength} people</p>
-//     <p>${currentDate}</p>`
-//   );
-// });
+app.get("/info", (req, res) => {
+  const currentDate = new Date();
+  Person.find({}).then((phonebook) => {
+    const phonebookLength = phonebook.length;
+    res.send(
+      `<p>Phonebook has info on ${phonebookLength} people</p>
+      <p>${currentDate}</p>`
+    );
+  });
+});
 
 app.delete("/api/persons/:id", (req, res, next) => {
   Person.findByIdAndRemove(req.params.id)

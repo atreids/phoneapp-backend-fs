@@ -1,9 +1,10 @@
-const { response } = require("express");
+require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3001;
+const Person = require("./models/person");
 
 app.use(express.json());
 app.use(cors());
@@ -16,65 +17,36 @@ app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :body")
 );
 
-let phonebook = [
-  {
-    id: 1,
-    name: "Arto Hellas",
-    number: "040-123456",
-  },
-  {
-    id: 2,
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-  },
-  {
-    id: 3,
-    name: "Dan Abramov",
-    number: "12-43-234345",
-  },
-  {
-    id: 4,
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-  },
-];
-
 app.get("/", (req, res) => {
   res.send("<h1>hello</h1>");
 });
 
 app.get("/api/persons/", (req, res) => {
-  res.json(phonebook);
+  Person.find({}).then((people) => {
+    res.json(people);
+  });
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const person = phonebook.find((n) => n.id === id);
-  if (!person) {
-    return res.send(404, "Person does not exist");
-  } else {
-    res.send(200, person);
-  }
+  Person.findById(req.params.id)
+    .then((person) => res.json(person))
+    .catch((error) => res.json(error.message));
 });
 
-app.get("/info", (req, res) => {
-  const currentDate = new Date();
-  const phonebookLength = phonebook.length;
-  res.send(
-    `<p>Phonebook has info on ${phonebookLength} people</p>
-    <p>${currentDate}</p>`
-  );
-});
+// app.get("/info", (req, res) => {
+//   const currentDate = new Date();
+//   const phonebookLength = phonebook.length;
+//   res.send(
+//     `<p>Phonebook has info on ${phonebookLength} people</p>
+//     <p>${currentDate}</p>`
+//   );
+// });
 
 app.delete("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  phonebook = phonebook.filter((n) => n.id !== id);
-  res.status(204).end();
+  Person.findByIdAndDelete(req.params.id).then(() => {
+    res.send(204).end();
+  });
 });
-
-const generateId = () => {
-  return Math.floor(Math.random() * 10000);
-};
 
 app.post("/api/persons/", (req, res) => {
   const newPerson = req.body;
@@ -85,19 +57,20 @@ app.post("/api/persons/", (req, res) => {
     });
   }
 
-  if (phonebook.find((person) => person.name === newPerson.name)) {
-    return res.status(400).json({
-      error: "name already exists in phonebook",
-    });
-  }
+  // if (phonebook.find((person) => person.name === newPerson.name)) {
+  //   return res.status(400).json({
+  //     error: "name already exists in phonebook",
+  //   });
+  // }
 
-  const person = {
-    id: generateId(),
+  const person = new Person({
     name: newPerson.name,
     number: newPerson.number,
-  };
-  phonebook = phonebook.concat(person);
-  res.send(204).end();
+  });
+
+  person.save().then((savedPerson) => {
+    res.json(savedPerson);
+  });
 });
 
 app.listen(PORT, () => {

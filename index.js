@@ -21,16 +21,18 @@ app.get("/", (req, res) => {
   res.send("<h1>hello</h1>");
 });
 
-app.get("/api/persons/", (req, res) => {
-  Person.find({}).then((people) => {
-    res.json(people);
-  });
+app.get("/api/persons/", (req, res, next) => {
+  Person.find({})
+    .then((people) => {
+      res.json(people);
+    })
+    .catch((error) => next(error));
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
   Person.findById(req.params.id)
     .then((person) => res.json(person))
-    .catch((error) => res.json(error.message));
+    .catch((error) => next(error));
 });
 
 // app.get("/info", (req, res) => {
@@ -42,13 +44,15 @@ app.get("/api/persons/:id", (req, res) => {
 //   );
 // });
 
-app.delete("/api/persons/:id", (req, res) => {
-  Person.findByIdAndDelete(req.params.id).then(() => {
-    res.send(204).end();
-  });
+app.delete("/api/persons/:id", (req, res, next) => {
+  Person.findByIdAndRemove(req.params.id)
+    .then(() => {
+      res.send(204).end();
+    })
+    .catch((error) => next(error));
 });
 
-app.post("/api/persons/", (req, res) => {
+app.post("/api/persons/", (req, res, next) => {
   const newPerson = req.body;
 
   if (!newPerson.name || !newPerson.number) {
@@ -57,21 +61,50 @@ app.post("/api/persons/", (req, res) => {
     });
   }
 
-  // if (phonebook.find((person) => person.name === newPerson.name)) {
-  //   return res.status(400).json({
-  //     error: "name already exists in phonebook",
-  //   });
-  // }
+  Person.find({ name: newPerson.name })
+    .then((personArray) => {
+      const [person] = personArray;
+      if (person) {
+        return res.status(400).json({
+          personid: person.id,
+        });
+      } else {
+        const person = new Person({
+          name: newPerson.name,
+          number: newPerson.number,
+        });
 
-  const person = new Person({
-    name: newPerson.name,
-    number: newPerson.number,
-  });
+        person.save().then((savedPerson) => {
+          res.json(savedPerson);
+        });
+      }
+    })
+    .catch((error) => next(error));
 
-  person.save().then((savedPerson) => {
-    res.json(savedPerson);
-  });
+  // return res.status(400).json({
+  //   error: "name already exists in phonebook",
+  //   existId:
+  // });
+
+  // const person = new Person({
+  //   name: newPerson.name,
+  //   number: newPerson.number,
+  // });
+
+  // person.save().then((savedPerson) => {
+  //   res.json(savedPerson);
+  // });
 });
+
+const errorHandler = (error, request, response, next) => {
+  console.log(error.message);
+
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "malformed id" });
+  }
+  next(error);
+};
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
